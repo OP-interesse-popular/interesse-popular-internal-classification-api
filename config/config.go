@@ -13,40 +13,42 @@ const (
 )
 
 type Config struct {
-	AppEnv              string
-	AutoMigrate         bool
-	CamaraBaseURL       string
-	CacheCheckInterval  time.Duration
-	CacheTTL            time.Duration
-	CORSAllowedOrigins  []string
-	DBConnectionString  string
-	InternalAPIKey      string
-	InternalReadAPIKey  string
-	Port                string
-	RedisURL            string
-	RefreshInterval     time.Duration
-	SenadoBaseURL       string
-	ExternalHTTPTimeout time.Duration
-	TrustedProxies      []string
+	AppEnv                  string
+	AutoMigrate             bool
+	CamaraBaseURL           string
+	CacheCheckInterval      time.Duration
+	CacheTTL                time.Duration
+	CORSAllowedOrigins      []string
+	DBConnectionString      string
+	InternalAPIKey          string
+	InternalReadAPIKey      string
+	Port                    string
+	RedisURL                string
+	RefreshInterval         time.Duration
+	SenadoBaseURL           string
+	TSEElectedCandidatesURL string
+	ExternalHTTPTimeout     time.Duration
+	TrustedProxies          []string
 }
 
 func Load() Config {
 	return Config{
-		AppEnv:              envOrDefault("APP_ENV", EnvironmentDevelopment),
-		AutoMigrate:         boolOrDefault("AUTO_MIGRATE", false),
-		CamaraBaseURL:       envOrDefault("CAMARA_BASE_URL", "https://dadosabertos.camara.leg.br/api/v2"),
-		CacheCheckInterval:  durationOrDefault("PARLIAMENTARIANS_CACHE_CHECK_INTERVAL", time.Minute),
-		CacheTTL:            durationOrDefault("PARLIAMENTARIANS_CACHE_TTL", 8*time.Hour),
-		CORSAllowedOrigins:  splitList(envOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:8080")),
-		DBConnectionString:  required("DB_CONNECTION_STRING"),
-		InternalAPIKey:      required("INTERNAL_API_KEY"),
-		InternalReadAPIKey:  required("INTERNAL_READ_API_KEY"),
-		Port:                envOrDefault("PORT", "3001"),
-		RedisURL:            required("REDIS_URL"),
-		RefreshInterval:     durationOrDefault("PARLIAMENTARIANS_REFRESH_INTERVAL", time.Hour),
-		SenadoBaseURL:       envOrDefault("SENADO_BASE_URL", "https://legis.senado.leg.br/dadosabertos"),
-		ExternalHTTPTimeout: durationOrDefault("EXTERNAL_HTTP_TIMEOUT", 30*time.Second),
-		TrustedProxies:      splitList(envOrDefault("TRUSTED_PROXIES", "127.0.0.1,::1")),
+		AppEnv:                  envOrDefault("APP_ENV", EnvironmentDevelopment),
+		AutoMigrate:             boolOrDefault("AUTO_MIGRATE", false),
+		CamaraBaseURL:           envOrDefault("CAMARA_BASE_URL", "https://dadosabertos.camara.leg.br/api/v2"),
+		CacheCheckInterval:      durationOrDefault("PARLIAMENTARIANS_CACHE_CHECK_INTERVAL", time.Minute),
+		CacheTTL:                durationOrDefault("PARLIAMENTARIANS_CACHE_TTL", 8*time.Hour),
+		CORSAllowedOrigins:      splitList(envOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:8080")),
+		DBConnectionString:      required("DB_CONNECTION_STRING"),
+		InternalAPIKey:          required("INTERNAL_API_KEY"),
+		InternalReadAPIKey:      required("INTERNAL_READ_API_KEY"),
+		Port:                    envOrDefault("PORT", "3001"),
+		RedisURL:                required("REDIS_URL"),
+		RefreshInterval:         durationOrDefault("PARLIAMENTARIANS_REFRESH_INTERVAL", time.Hour),
+		SenadoBaseURL:           envOrDefault("SENADO_BASE_URL", "https://legis.senado.leg.br/dadosabertos"),
+		TSEElectedCandidatesURL: strings.TrimSpace(os.Getenv("TSE_ELECTED_CANDIDATES_URL")),
+		ExternalHTTPTimeout:     durationOrDefault("EXTERNAL_HTTP_TIMEOUT", 30*time.Second),
+		TrustedProxies:          splitList(envOrDefault("TRUSTED_PROXIES", "127.0.0.1,::1")),
 	}
 }
 

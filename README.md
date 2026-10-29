@@ -75,3 +75,41 @@ parlamentares e grava o resultado no Redis. A atualização periódica é de uma
 com verificação de cache vazio a cada minuto e TTL de oito horas. Criações, edições e
 exclusões de classificações solicitam uma atualização imediatamente; se outra já
 estiver em execução, uma nova é enfileirada ao seu término.
+
+## Políticos, mandatos e cartas
+
+O sincronizador mantém todo o conjunto de políticos, não apenas quem está em
+exercício: a identidade interna de cada pessoa, seus IDs externos e seus mandatos.
+O ID da Câmara ou do Senado identifica a origem do dado; o `politician.id` é a
+identidade permanente usada pela plataforma. A fonte eleitoral do TSE é configurada
+por `TSE_ELECTED_CANDIDATES_URL` e deve apontar para o ZIP/CSV oficial com a coluna
+`DS_SIT_TOT_TURNO` (o exemplo usa `consulta_cand_2026.zip`).
+
+O mesmo político pode ter, simultaneamente, o mandato atual `active` e o próximo
+`elected_pending`. Este último contém início e fim previstos. Quando a casa passa a
+listá-lo após a posse, o próximo mandato vira `active` e o anterior vira `former`.
+Quando alguém deixa de constar na lista oficial, seu mandato também é preservado como
+`former`; a última observação da fonte e a data de encerramento ficam registradas.
+Deputados federais em exercício recebem as datas constitucionais inferidas do mandato
+vigente; para senadores em exercício, a data só é preenchida quando a fonte informar
+o mandato ou quando ele vier do resultado eleitoral, pois as turmas têm vencimentos
+diferentes.
+
+O sync só faz correspondência automática quando nome normalizado, UF e cargo formam
+uma única correspondência. A associação é registrada para auditoria. Não há merge
+automático por nome isolado.
+
+As cartas são uma camada editorial manual e não são inferidas pelo partido ou pelo
+sync. Primeiro consulte `GET /api/internal/v1/politicians` para obter o
+`politicianId`; depois use o CRUD protegido:
+
+```text
+GET    /api/internal/v1/politician-editorial-marks
+POST   /api/internal/v1/politician-editorial-marks
+PUT    /api/internal/v1/politician-editorial-marks
+DELETE /api/internal/v1/politician-editorial-marks/:id
+```
+
+`POST` e `PUT` recebem arrays e retornam `207 Multi-Status`, como a classificação de
+partidos. Cada marca exige direção, ideologia, evidência, fonte, versão de metodologia
+e período de vigência; `cardEnabled` controla se ela pode ser exibida como carta.

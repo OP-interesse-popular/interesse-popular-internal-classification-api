@@ -13,10 +13,15 @@ type App struct {
 	Router                   *gin.Engine
 	Config                   config.Config
 	PartyPoliticalDirections *handlers.PartyPoliticalDirection
+	Politicians              *handlers.Politicians
+	PoliticianEditorialMarks *handlers.PoliticianEditorialMarks
 }
 
 func New(router *gin.Engine, db *gorm.DB, cfg config.Config, refresher services.PartyClassificationCacheRefresher) *App {
-	repository := repositories.NewPartyPoliticalDirection(db)
-	service := services.NewPartyPoliticalDirection(repository, refresher)
-	return &App{Router: router, Config: cfg, PartyPoliticalDirections: handlers.NewPartyPoliticalDirection(service)}
+	partyRepository := repositories.NewPartyPoliticalDirection(db)
+	politicianRepository := repositories.NewPolitician(db)
+	partyService := services.NewPartyPoliticalDirection(partyRepository, refresher)
+	markRepository := repositories.NewPoliticianEditorialMark(db)
+	markService := services.NewPoliticianEditorialMarks(markRepository, politicianRepository)
+	return &App{Router: router, Config: cfg, PartyPoliticalDirections: handlers.NewPartyPoliticalDirection(partyService), Politicians: handlers.NewPoliticians(politicianRepository), PoliticianEditorialMarks: handlers.NewPoliticianEditorialMarks(markService)}
 }

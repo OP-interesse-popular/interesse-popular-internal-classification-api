@@ -57,8 +57,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	tseClient, err := clients.NewTSEHTTPClient(cfg.TSEElectedCandidatesURL, httpClient)
+	if err != nil {
+		panic(err)
+	}
 	partyRepository := repositories.NewPartyPoliticalDirection(db)
-	synchronizer := services.NewParliamentarianSync(cache, camaraClient, senadoClient, partyRepository)
+	politicianRepository := repositories.NewPolitician(db)
+	synchronizer := services.NewParliamentarianSync(cache, camaraClient, senadoClient, partyRepository, politicianRepository, tseClient)
 	scheduler.NewParliamentarianRefresh(synchronizer, cfg.CacheCheckInterval, cfg.RefreshInterval).Start(context.Background())
 
 	middlewares.ConfigureLogger()

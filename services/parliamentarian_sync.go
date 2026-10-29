@@ -9,6 +9,7 @@ import (
 
 	"github.com/OP-interesse-popular/interesse-popular-internal-classification/clients"
 	"github.com/OP-interesse-popular/interesse-popular-internal-classification/models"
+	"github.com/OP-interesse-popular/interesse-popular-internal-classification/repositories"
 )
 
 // ParliamentarianStore persists the read model consumed by the public API.
@@ -28,16 +29,18 @@ type PartyClassificationReader interface {
 
 // ParliamentarianSync coordinates source clients and the cache. HTTP and scheduling stay outside this service.
 type ParliamentarianSync struct {
-	cache   ParliamentarianStore
-	camara  clients.CamaraClient
-	senado  clients.SenadoClient
-	parties PartyClassificationReader
-	running atomic.Bool
-	pending atomic.Bool
+	cache       ParliamentarianStore
+	camara      clients.CamaraClient
+	senado      clients.SenadoClient
+	parties     PartyClassificationReader
+	politicians repositories.PoliticianRepository
+	tse         clients.TSEClient
+	running     atomic.Bool
+	pending     atomic.Bool
 }
 
-func NewParliamentarianSync(cache ParliamentarianStore, camara clients.CamaraClient, senado clients.SenadoClient, parties PartyClassificationReader) *ParliamentarianSync {
-	return &ParliamentarianSync{cache: cache, camara: camara, senado: senado, parties: parties}
+func NewParliamentarianSync(cache ParliamentarianStore, camara clients.CamaraClient, senado clients.SenadoClient, parties PartyClassificationReader, politicians repositories.PoliticianRepository, tse clients.TSEClient) *ParliamentarianSync {
+	return &ParliamentarianSync{cache: cache, camara: camara, senado: senado, parties: parties, politicians: politicians, tse: tse}
 }
 
 func (s *ParliamentarianSync) Sync(ctx context.Context) {
@@ -71,6 +74,30 @@ func (s *ParliamentarianSync) Sync(ctx context.Context) {
 	slog.Info("parliamentarians_sync_step_completed", "step", "senado", "count", len(senado))
 
 	items := append(camara, senado...)
+	if err := s.politicians.SyncActive(ctx, items); err != nil {
+		slog.Error("parliamentarians_sync_failed", "step", "politicians", "error", err)
+		return
+	}
+	slog.Info("parliamentarians_sync_step_completed", "step", "politicians", "count", len(items))
+	if s.tse != nil {
+		slog.Info("parliamentarians_sync_started", "step", "tse_elected_candidates")
+		candidates, err := s.tse.ListElectedFederalParliamentarians(ctx)
+		if err != nil {
+			slog.Error("parliamentarians_sync_failed", "step", "tse_elected_candidates", "error", err)
+			return
+		}
+		elected := make([]repositories.ElectedCandidate, 0, len(candidates))
+		for _, candidate := range candidates {
+			elected = append(elected, repositories.ElectedCandidate{TSECandidateID: candidate.CandidateID, FullName: candidate.FullName, BallotName: candidate.BallotName, PartyAcronym: candidate.Party, State: candidate.State, LegislativeHouse: candidate.House, Office: candidate.Office, ElectionYear: candidate.ElectionYear})
+		}
+		if err := s.politicians.SyncElected(ctx, elected); err != nil {
+			slog.Error("parliamentarians_sync_failed", "step", "tse_merge", "error", err)
+			return
+		}
+		slog.Info("parliamentarians_sync_step_completed", "step", "tse_merge", "count", len(elected))
+	} else {
+		slog.Info("parliamentarians_sync_skipped", "step", "tse_merge", "reason", "TSE_ELECTED_CANDIDATES_URL_not_configured")
+	}
 	classifications, err := s.parties.ListActive()
 	if err != nil {
 		slog.Error("parliamentarians_sync_failed", "step", "party_classifications", "error", err)

@@ -10,4 +10,14 @@ func Connect(connectionString string) (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(connectionString), &gorm.Config{})
 }
 
-func Migrate(db *gorm.DB) error { return db.AutoMigrate(&models.PartyPoliticalDirection{}) }
+func Migrate(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&models.PartyPoliticalDirection{},
+		&models.Politician{},
+		&models.PoliticianAlias{},
+		&models.PoliticianExternalID{},
+		&models.ParliamentaryMandate{},
+		&models.PoliticianIdentityMatch{},
+		&models.PoliticianEditorialMark{},
+	)
+}

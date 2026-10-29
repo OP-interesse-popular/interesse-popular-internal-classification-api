@@ -23,4 +23,14 @@ func (a *App) RegisterRoutes() {
 	directions.POST("", middlewares.RequireInternalAPIKey(a.Config.InternalAPIKey), a.PartyPoliticalDirections.CreateMany())
 	directions.PUT("", middlewares.RequireInternalAPIKey(a.Config.InternalAPIKey), a.PartyPoliticalDirections.UpdateMany())
 	directions.DELETE("/:id", middlewares.RequireInternalAPIKey(a.Config.InternalAPIKey), a.PartyPoliticalDirections.Delete())
+
+	politicians := a.Router.Group("/api/internal/v1/politicians")
+	politicians.GET("", middlewares.RequireInternalReadAPIKey(a.Config.InternalReadAPIKey, a.Config.InternalAPIKey), a.Politicians.List())
+	politicians.GET("/:id", middlewares.RequireInternalReadAPIKey(a.Config.InternalReadAPIKey, a.Config.InternalAPIKey), a.Politicians.Get())
+
+	marks := a.Router.Group("/api/internal/v1/politician-editorial-marks")
+	marks.GET("", middlewares.RequireInternalReadAPIKey(a.Config.InternalReadAPIKey, a.Config.InternalAPIKey), a.PoliticianEditorialMarks.List())
+	marks.POST("", middlewares.RequireInternalAPIKey(a.Config.InternalAPIKey), a.PoliticianEditorialMarks.CreateMany())
+	marks.PUT("", middlewares.RequireInternalAPIKey(a.Config.InternalAPIKey), a.PoliticianEditorialMarks.UpdateMany())
+	marks.DELETE("/:id", middlewares.RequireInternalAPIKey(a.Config.InternalAPIKey), a.PoliticianEditorialMarks.Delete())
 }
