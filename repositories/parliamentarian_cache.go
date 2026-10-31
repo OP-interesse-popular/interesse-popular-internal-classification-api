@@ -9,7 +9,13 @@ import (
 	"time"
 )
 
-const ParliamentariansCacheKey = "opip:parliamentarians:v1"
+const (
+	// ParliamentariansCacheKey contains only people currently returned by Câmara and Senado.
+	ParliamentariansCacheKey = "opip:parliamentarians:v1"
+	// PoliticiansCacheKey contains all known identities and their mandate history,
+	// including elected_pending and former mandates.
+	PoliticiansCacheKey = "opip:politicians:v1"
+)
 
 var ErrCacheEmpty = errors.New("parliamentarians cache is empty")
 
@@ -33,7 +39,20 @@ func (r *ParliamentarianCache) Set(ctx context.Context, items []models.Parliamen
 	}
 	return r.client.Set(ctx, ParliamentariansCacheKey, value, r.ttl).Err()
 }
+
+func (r *ParliamentarianCache) SetAll(ctx context.Context, items []models.Politician) error {
+	value, err := json.Marshal(items)
+	if err != nil {
+		return err
+	}
+	return r.client.Set(ctx, PoliticiansCacheKey, value, r.ttl).Err()
+}
 func (r *ParliamentarianCache) IsEmpty(ctx context.Context) (bool, error) {
 	count, err := r.client.Exists(ctx, ParliamentariansCacheKey).Result()
+	return count == 0, err
+}
+
+func (r *ParliamentarianCache) IsAllEmpty(ctx context.Context) (bool, error) {
+	count, err := r.client.Exists(ctx, PoliticiansCacheKey).Result()
 	return count == 0, err
 }

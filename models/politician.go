@@ -84,13 +84,17 @@ func (p *PoliticianExternalID) BeforeCreate(_ *gorm.DB) error {
 }
 
 type ParliamentaryMandate struct {
-	ID               string     `gorm:"type:uuid;primaryKey" json:"id"`
-	PoliticianID     string     `gorm:"type:uuid;not null;index;uniqueIndex:ux_mandate" json:"politicianId"`
-	LegislativeHouse string     `gorm:"size:20;not null;uniqueIndex:ux_mandate" json:"legislativeHouse"`
-	Office           string     `gorm:"size:100;not null;uniqueIndex:ux_mandate" json:"office"`
-	State            string     `gorm:"size:2;not null;uniqueIndex:ux_mandate" json:"state"`
-	ElectionYear     *int       `gorm:"uniqueIndex:ux_mandate" json:"electionYear,omitempty"`
-	PartyAcronym     string     `gorm:"size:30" json:"partyAcronym"`
+	ID               string `gorm:"type:uuid;primaryKey" json:"id"`
+	PoliticianID     string `gorm:"type:uuid;not null;index;uniqueIndex:ux_mandate" json:"politicianId"`
+	LegislativeHouse string `gorm:"size:20;not null;uniqueIndex:ux_mandate" json:"legislativeHouse"`
+	Office           string `gorm:"size:100;not null;uniqueIndex:ux_mandate" json:"office"`
+	State            string `gorm:"size:2;not null;uniqueIndex:ux_mandate" json:"state"`
+	ElectionYear     *int   `gorm:"uniqueIndex:ux_mandate" json:"electionYear,omitempty"`
+	PartyAcronym     string `gorm:"size:30" json:"partyAcronym"`
+	// PartyDirection and PartyIdeology are a cache projection of the current
+	// editorial party classification; they are not historical source data.
+	PartyDirection   string     `gorm:"-" json:"partyDirection,omitempty"`
+	PartyIdeology    string     `gorm:"-" json:"partyIdeology,omitempty"`
 	Status           string     `gorm:"size:30;not null;index" json:"status"`
 	StartsAt         *time.Time `json:"startsAt,omitempty"`
 	EndsAt           *time.Time `json:"endsAt,omitempty"`

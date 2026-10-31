@@ -15,7 +15,9 @@ import (
 // ParliamentarianStore persists the read model consumed by the public API.
 type ParliamentarianStore interface {
 	Set(context.Context, []models.Parliamentarian) error
+	SetAll(context.Context, []models.Politician) error
 	IsEmpty(context.Context) (bool, error)
+	IsAllEmpty(context.Context) (bool, error)
 }
 
 type ParliamentarianSynchronizer interface {
@@ -105,6 +107,18 @@ func (s *ParliamentarianSync) Sync(ctx context.Context) {
 	}
 	items = applyPartyClassifications(items, classifications)
 	slog.Info("parliamentarians_sync_step_completed", "step", "party_classifications", "count", len(classifications))
+	allPoliticians, err := s.politicians.List()
+	if err != nil {
+		slog.Error("parliamentarians_sync_failed", "step", "all_politicians_read", "error", err)
+		return
+	}
+	allPoliticians = applyMandatePartyClassifications(allPoliticians, classifications)
+	slog.Info("parliamentarians_sync_started", "step", "redis_all_politicians_write", "count", len(allPoliticians))
+	if err := s.cache.SetAll(ctx, allPoliticians); err != nil {
+		slog.Error("parliamentarians_sync_failed", "step", "redis_all_politicians_write", "error", err)
+		return
+	}
+	slog.Info("parliamentarians_sync_step_completed", "step", "redis_all_politicians_write", "count", len(allPoliticians))
 	slog.Info("parliamentarians_sync_started", "step", "redis_write", "count", len(items))
 	if err := s.cache.Set(ctx, items); err != nil {
 		slog.Error("parliamentarians_sync_failed", "step", "redis_write", "error", err)
@@ -121,12 +135,16 @@ func (s *ParliamentarianSync) Refresh(ctx context.Context) {
 
 // EnsureCache is used by the one-minute scheduler check.
 func (s *ParliamentarianSync) EnsureCache(ctx context.Context) error {
-	empty, err := s.cache.IsEmpty(ctx)
+	activeEmpty, err := s.cache.IsEmpty(ctx)
 	if err != nil {
-		return fmt.Errorf("check parliamentarians cache: %w", err)
+		return fmt.Errorf("check active parliamentarians cache: %w", err)
 	}
-	if empty {
-		slog.Info("parliamentarians_cache_empty", "action", "sync")
+	allEmpty, err := s.cache.IsAllEmpty(ctx)
+	if err != nil {
+		return fmt.Errorf("check all politicians cache: %w", err)
+	}
+	if activeEmpty || allEmpty {
+		slog.Info("parliamentarians_cache_empty", "active_empty", activeEmpty, "all_politicians_empty", allEmpty, "action", "sync")
 		s.Sync(ctx)
 	}
 	return nil
@@ -144,6 +162,25 @@ func applyPartyClassifications(items []models.Parliamentarian, classifications [
 		}
 		items[index].PartyDirection = classification.Direction
 		items[index].PartyIdeology = classification.Ideology
+	}
+	return items
+}
+
+func applyMandatePartyClassifications(items []models.Politician, classifications []models.PartyPoliticalDirection) []models.Politician {
+	byAcronym := make(map[string]models.PartyPoliticalDirection, len(classifications))
+	for _, classification := range classifications {
+		byAcronym[strings.ToUpper(strings.TrimSpace(classification.PartyAcronym))] = classification
+	}
+	for politicianIndex := range items {
+		for mandateIndex := range items[politicianIndex].Mandates {
+			mandate := &items[politicianIndex].Mandates[mandateIndex]
+			classification, ok := byAcronym[strings.ToUpper(strings.TrimSpace(mandate.PartyAcronym))]
+			if !ok {
+				continue
+			}
+			mandate.PartyDirection = classification.Direction
+			mandate.PartyIdeology = classification.Ideology
+		}
 	}
 	return items
 }

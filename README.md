@@ -71,7 +71,10 @@ O serviço valida a coerência entre direção e ideologia. `methodologyVersion`
 ## Cache de parlamentares
 
 Esta API consulta Câmara e Senado, associa a classificação ativa de cada partido aos
-parlamentares e grava o resultado no Redis. A atualização periódica é de uma hora,
+parlamentares e grava o resultado no Redis. Há duas projeções de leitura:
+`opip:parliamentarians:v1`, somente pessoas em exercício, e
+`opip:politicians:v1`, com todas as identidades e seus mandatos `active`,
+`elected_pending` e `former`. A atualização periódica é de uma hora,
 com verificação de cache vazio a cada minuto e TTL de oito horas. Criações, edições e
 exclusões de classificações solicitam uma atualização imediatamente; se outra já
 estiver em execução, uma nova é enfileirada ao seu término.
